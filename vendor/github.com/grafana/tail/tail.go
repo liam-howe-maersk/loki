@@ -295,7 +295,7 @@ func (tail *Tail) readLine() (string, error) {
 func (tail *Tail) tailFileSync() {
 	defer tail.Done()
 	defer tail.close()
-
+	tail.Logger.Printf("Called tailFileSync on %s", tail.Filename)
 	if !tail.MustExist {
 		// deferred first open, not technically truncated but we don't need to check for changed files
 		err := tail.reopen(true)
@@ -357,6 +357,7 @@ func (tail *Tail) tailFileSync() {
 				}
 			}
 		} else if err == io.EOF {
+			tail.Logger.Printf("EOF on %s\n", tail.Filename)
 			if !tail.Follow {
 				if line != "" {
 					tail.sendLine(line)
@@ -387,6 +388,7 @@ func (tail *Tail) tailFileSync() {
 					return
 				}
 			}
+			tail.Logger.Printf("oneMoreRun is %v for %s\n", oneMoreRun, tail.Filename)
 
 			// When EOF is reached, wait for more data to become
 			// available. Wait strategy is based on the `tail.watcher`
