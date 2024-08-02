@@ -1,7 +1,6 @@
 package stages
 
 import (
-	"fmt"
 	"reflect"
 	"regexp"
 	"time"
@@ -127,9 +126,6 @@ func (r *regexStage) Process(_ model.LabelSet, extracted map[string]interface{},
 		if i != 0 && name != "" {
 			extracted[name] = match[i]
 		}
-	}
-	if Debug {
-		level.Debug(r.logger).Log("msg", "extracted data debug in regex stage", "extracted data", fmt.Sprintf("%v", extracted))
 	}
 }
 

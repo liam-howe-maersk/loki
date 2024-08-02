@@ -70,10 +70,6 @@ func (o *outputStage) Process(_ model.LabelSet, extracted map[string]interface{}
 			return
 		}
 		*entry = s
-	} else {
-		if Debug {
-			level.Debug(o.logger).Log("msg", "extracted data did not contain output source")
-		}
 	}
 }
 
