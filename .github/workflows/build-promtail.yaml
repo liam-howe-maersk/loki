@@ -37,8 +37,8 @@ jobs:
           roleId: ${{ secrets.VAULT_ROLE_ID }}
           secretId: ${{ secrets.VAULT_SECRET_ID }}
           secrets: |
-            telemetry-kv/data/readable/harbor/pensieve-write-user PASSWORD;
-            telemetry-kv/data/readable/harbor/pensieve-write-user USERNAME;
+            telemetry-kv/data/readable/harbor/mop-write-user PASSWORD;
+            telemetry-kv/data/readable/harbor/mop-write-user USERNAME;
       - name: Login to Maersk Harbor
         uses: docker/login-action@v3.0.0
         with:
@@ -48,5 +48,5 @@ jobs:
       - name: Build Harbor image
         id: build-harbor
         run: |
-          docker tag grafana/promtail:${{ steps.prep.outputs.BUILD_ID }} harbor.maersk.io/mop/promtail:${{ steps.prep.outputs.BUILD_ID }}
+          docker tag docker.io/grafana/promtail:${{ steps.prep.outputs.BUILD_ID }} harbor.maersk.io/mop/promtail:${{ steps.prep.outputs.BUILD_ID }}
           docker push harbor.maersk.io/mop/promtail:${{ steps.prep.outputs.BUILD_ID }}
