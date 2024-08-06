@@ -330,6 +330,7 @@ func (tail *Tail) tailFileSync() {
 			// grab the position in case we need to back up in the event of a half-line
 			offset, err = tail.Tell()
 			if err != nil {
+				tail.Logger.Printf("Error retrieving offset: %s\n", err)
 				tail.Kill(err)
 				return
 			}
@@ -340,6 +341,7 @@ func (tail *Tail) tailFileSync() {
 		// Process `line` even if err is EOF.
 		if err == nil {
 			cooloff := !tail.sendLine(line)
+			tail.Logger.Printf("Log line(s) read and sent, with cooloff %v\n", cooloff)
 			if cooloff {
 				// Wait a second before seeking till the end of
 				// file when rate limit is reached.
@@ -370,6 +372,7 @@ func (tail *Tail) tailFileSync() {
 				// it's not followed by a newline; seems a fair trade here
 				err := tail.seekTo(SeekInfo{Offset: offset, Whence: 0})
 				if err != nil {
+					tail.Logger.Printf("seekTo returned error: %s\n", err)
 					tail.Kill(err)
 					return
 				}
@@ -379,6 +382,7 @@ func (tail *Tail) tailFileSync() {
 			// this is to catch events which might get missed in polling mode.
 			// now that the last run is completed, finish deleting the file
 			if oneMoreRun {
+				tail.Logger.Printf("oneMoreRun is %v for %s\n", oneMoreRun, tail.Filename)
 				oneMoreRun = false
 				err = tail.finishDelete()
 				if err != nil {
@@ -388,13 +392,13 @@ func (tail *Tail) tailFileSync() {
 					return
 				}
 			}
-			tail.Logger.Printf("oneMoreRun is %v for %s\n", oneMoreRun, tail.Filename)
 
 			// When EOF is reached, wait for more data to become
 			// available. Wait strategy is based on the `tail.watcher`
 			// implementation (inotify or polling).
 			oneMoreRun, err = tail.waitForChanges()
 			if err != nil {
+				tail.Logger.Printf("waitForChanges returned error: %s\n", err)
 				if err != ErrStop {
 					tail.Kill(err)
 				}
@@ -402,6 +406,7 @@ func (tail *Tail) tailFileSync() {
 			}
 		} else {
 			// non-EOF error
+			tail.Logger.Printf("Error reading %s: %s\n", tail.Filename, err)
 			tail.Killf("Error reading %s: %s", tail.Filename, err)
 			return
 		}
@@ -411,6 +416,7 @@ func (tail *Tail) tailFileSync() {
 			if tail.Err() == errStopAtEOF {
 				continue
 			}
+			tail.Logger.Printf("Tailing dying with error: %s\n", tail.Err())
 			return
 		default:
 		}
@@ -502,9 +508,11 @@ func (tail *Tail) sendLine(line string) bool {
 
 	// Split longer lines
 	if tail.MaxLineSize > 0 && len(line) > tail.MaxLineSize {
+		tail.Logger.Printf("Line size larger than maxLineSize %d, partitioning\n", tail.MaxLineSize)
 		lines = util.PartitionString(line, tail.MaxLineSize)
 	}
 
+	tail.Logger.Printf("Sending %d lines\n", len(lines))
 	for _, line := range lines {
 		tail.Lines <- &Line{line, now, nil}
 	}
