@@ -341,7 +341,7 @@ func (tail *Tail) tailFileSync() {
 		// Process `line` even if err is EOF.
 		if err == nil {
 			cooloff := !tail.sendLine(line)
-			tail.Logger.Printf("Log line(s) read and sent, with cooloff %v\n", cooloff)
+			tail.Logger.Printf("Log line(s) read and sent for file %s, with cooloff %v\n", tail.Filename, cooloff)
 			if cooloff {
 				// Wait a second before seeking till the end of
 				// file when rate limit is reached.
@@ -512,7 +512,7 @@ func (tail *Tail) sendLine(line string) bool {
 		lines = util.PartitionString(line, tail.MaxLineSize)
 	}
 
-	tail.Logger.Printf("Sending %d lines\n", len(lines))
+	tail.Logger.Printf("Sending %d lines for file %s\n", len(lines), tail.Filename)
 	for _, line := range lines {
 		tail.Lines <- &Line{line, now, nil}
 	}
