@@ -222,6 +222,7 @@ func (t *FileTarget) run() {
 				t.startTailing([]string{event.Name})
 			default:
 				// No-op we only care about Create events
+				level.Debug(t.logger).Log("msg", "received no-op event", "event", event)
 			}
 		case <-ticker.C:
 			err := t.sync()
