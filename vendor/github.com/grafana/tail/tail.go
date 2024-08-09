@@ -361,7 +361,9 @@ func (tail *Tail) tailFileSync() {
 				}
 			}
 		} else if err == io.EOF {
-			tail.Logger.Printf("EOF on %s\n", tail.Filename)
+			if !strings.Contains(tail.Filename, "promtail-liam-test-logs") {
+				tail.Logger.Printf("EOF on %s\n", tail.Filename)
+			}
 			if !tail.Follow {
 				if line != "" {
 					tail.sendLine(line)
