@@ -168,13 +168,18 @@ func (t *tailer) readLines() {
 			level.Info(t.logger).Log("msg", "tail routine: tail channel closed, stopping tailer", "path", t.path, "reason", t.tail.Tomb.Err())
 			return
 		}
-
+		if !strings.Contains(t.tail.Filename, "promtail-liam-test-logs") {
+			level.Info(t.logger).Log("msg", fmt.Sprintf("Validated log line is ok for file %s, contains 'http /routings-queries' %v\n", t.tail.Filename, strings.Contains(line.Text, "http /routings-queries")))
+		}
 		// Note currently the tail implementation hardcodes Err to nil, this should never hit.
 		if line.Err != nil {
 			level.Error(t.logger).Log("msg", "tail routine: error reading line", "path", t.path, "error", line.Err)
 			continue
 		}
 
+		if !strings.Contains(t.tail.Filename, "promtail-liam-test-logs") {
+			level.Info(t.logger).Log("msg", fmt.Sprintf("Decoding log line for file %s, contains 'http /routings-queries' %v\n", t.tail.Filename, strings.Contains(line.Text, "http /routings-queries")))
+		}
 		var text string
 		if t.decoder != nil {
 			var err error
@@ -188,6 +193,9 @@ func (t *tailer) readLines() {
 			text = line.Text
 		}
 
+		if !strings.Contains(t.tail.Filename, "promtail-liam-test-logs") {
+			level.Info(t.logger).Log("msg", fmt.Sprintf("Incrementing read_lines metric for file %s, contains 'http /routings-queries' %v\n", t.tail.Filename, strings.Contains(line.Text, "http /routings-queries")))
+		}
 		t.metrics.readLines.WithLabelValues(t.path, fmt.Sprintf("%v", strings.Contains(line.Text, "http /routings-queries"))).Inc()
 		entries <- api.Entry{
 			Labels: model.LabelSet{},
