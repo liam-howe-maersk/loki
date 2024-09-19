@@ -177,9 +177,9 @@ func (t *tailer) readLines() {
 			continue
 		}
 
-		if !strings.Contains(t.tail.Filename, "promtail-liam-test-logs") {
-			level.Info(t.logger).Log("msg", fmt.Sprintf("Decoding log line for file %s, contains 'http /routings-queries' %v\n", t.tail.Filename, strings.Contains(line.Text, "http /routings-queries")))
-		}
+		// if !strings.Contains(t.tail.Filename, "promtail-liam-test-logs") {
+		// 	level.Info(t.logger).Log("msg", fmt.Sprintf("Decoding log line for file %s, contains 'http /routings-queries' %v\n", t.tail.Filename, strings.Contains(line.Text, "http /routings-queries")))
+		// }
 		var text string
 		if t.decoder != nil {
 			var err error

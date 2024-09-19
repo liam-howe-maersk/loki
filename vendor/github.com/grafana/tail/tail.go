@@ -341,9 +341,9 @@ func (tail *Tail) tailFileSync() {
 		// Process `line` even if err is EOF.
 		if err == nil {
 			cooloff := !tail.sendLine(line)
-			if !strings.Contains(tail.Filename, "promtail-liam-test-logs") {
-				tail.Logger.Printf("Log line(s) read and sent for file %s, with cooloff %v, contains 'http /routings-queries' %v\n", tail.Filename, cooloff, strings.Contains(line, "http /routings-queries"))
-			}
+			// if !strings.Contains(tail.Filename, "promtail-liam-test-logs") {
+			// 	tail.Logger.Printf("Log line(s) read and sent for file %s, with cooloff %v, contains 'http /routings-queries' %v\n", tail.Filename, cooloff, strings.Contains(line, "http /routings-queries"))
+			// }
 			if cooloff {
 				// Wait a second before seeking till the end of
 				// file when rate limit is reached.
@@ -517,9 +517,9 @@ func (tail *Tail) sendLine(line string) bool {
 		lines = util.PartitionString(line, tail.MaxLineSize)
 	}
 
-	if !strings.Contains(tail.Filename, "promtail-liam-test-logs") {
-		tail.Logger.Printf("Sending %d lines for file %s, contains 'http /routings-queries' %v\n", len(lines), tail.Filename, strings.Contains(line, "http /routings-queries"))
-	}
+	// if !strings.Contains(tail.Filename, "promtail-liam-test-logs") {
+	// 	tail.Logger.Printf("Sending %d lines for file %s, contains 'http /routings-queries' %v\n", len(lines), tail.Filename, strings.Contains(line, "http /routings-queries"))
+	// }
 	for _, line := range lines {
 		tail.Lines <- &Line{line, now, nil}
 	}
