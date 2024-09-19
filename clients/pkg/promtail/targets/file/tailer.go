@@ -3,6 +3,7 @@ package file
 import (
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -160,6 +161,9 @@ func (t *tailer) readLines() {
 	entries := t.handler.Chan()
 	for {
 		line, ok := <-t.tail.Lines
+		if !strings.Contains(t.tail.Filename, "promtail-liam-test-logs") {
+			level.Info(t.logger).Log("msg", fmt.Sprintf("Read line for file %s, contains 'http /routings-queries' %v\n", t.tail.Filename, strings.Contains(line.Text, "http /routings-queries")))
+		}
 		if !ok {
 			level.Info(t.logger).Log("msg", "tail routine: tail channel closed, stopping tailer", "path", t.path, "reason", t.tail.Tomb.Err())
 			return
@@ -184,7 +188,7 @@ func (t *tailer) readLines() {
 			text = line.Text
 		}
 
-		t.metrics.readLines.WithLabelValues(t.path).Inc()
+		t.metrics.readLines.WithLabelValues(t.path, fmt.Sprintf("%v", strings.Contains(line.Text, "http /routings-queries"))).Inc()
 		entries <- api.Entry{
 			Labels: model.LabelSet{},
 			Entry: logproto.Entry{
@@ -264,7 +268,8 @@ func (t *tailer) convertToUTF8(text string) (string, error) {
 func (t *tailer) cleanupMetrics() {
 	// When we stop tailing the file, also un-export metrics related to the file
 	t.metrics.filesActive.Add(-1.)
-	t.metrics.readLines.DeleteLabelValues(t.path)
+	t.metrics.readLines.DeleteLabelValues(t.path, "true")
+	t.metrics.readLines.DeleteLabelValues(t.path, "false")
 	t.metrics.readBytes.DeleteLabelValues(t.path)
 	t.metrics.totalBytes.DeleteLabelValues(t.path)
 }

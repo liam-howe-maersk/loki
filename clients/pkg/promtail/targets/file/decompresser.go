@@ -233,7 +233,7 @@ func (t *decompressor) readLines() {
 			finalText = text
 		}
 
-		t.metrics.readLines.WithLabelValues(t.path).Inc()
+		t.metrics.readLines.WithLabelValues(t.path, "unknown").Inc()
 
 		entries <- api.Entry{
 			Labels: model.LabelSet{},
@@ -297,7 +297,7 @@ func (t *decompressor) convertToUTF8(text string) (string, error) {
 func (t *decompressor) cleanupMetrics() {
 	// When we stop tailing the file, also un-export metrics related to the file
 	t.metrics.filesActive.Add(-1.)
-	t.metrics.readLines.DeleteLabelValues(t.path)
+	t.metrics.readLines.DeleteLabelValues(t.path, "unknown")
 	t.metrics.readBytes.DeleteLabelValues(t.path)
 	t.metrics.totalBytes.DeleteLabelValues(t.path)
 }

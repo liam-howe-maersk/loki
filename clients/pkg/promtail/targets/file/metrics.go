@@ -39,7 +39,7 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 		Namespace: "promtail",
 		Name:      "read_lines_total",
 		Help:      "Number of lines read.",
-	}, []string{"path"})
+	}, []string{"path", "contains_routing_queries_request"})
 	m.filesActive = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: "promtail",
 		Name:      "files_active_total",
