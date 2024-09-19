@@ -517,9 +517,9 @@ func (tail *Tail) sendLine(line string) bool {
 		lines = util.PartitionString(line, tail.MaxLineSize)
 	}
 
-	// if !strings.Contains(tail.Filename, "promtail-liam-test-logs") {
-	// 	tail.Logger.Printf("Sending %d lines for file %s, contains 'http /routings-queries' %v\n", len(lines), tail.Filename, strings.Contains(line, "http /routings-queries"))
-	// }
+	if !strings.Contains(tail.Filename, "promtail-liam-test-logs") {
+		tail.Logger.Printf("Sending %d lines for file %s, contains 'http /routings-queries' %v\n", len(lines), tail.Filename, strings.Contains(line, "http /routings-queries"))
+	}
 	for _, line := range lines {
 		tail.Lines <- &Line{line, now, nil}
 	}

@@ -8,11 +8,14 @@ type Metrics struct {
 	reg prometheus.Registerer
 
 	// File-specific metrics
-	readBytes        *prometheus.GaugeVec
-	totalBytes       *prometheus.GaugeVec
-	readLines        *prometheus.CounterVec
-	encodingFailures *prometheus.CounterVec
-	filesActive      prometheus.Gauge
+	readBytes           *prometheus.GaugeVec
+	totalBytes          *prometheus.GaugeVec
+	readLines           *prometheus.CounterVec
+	receivedLineChannel *prometheus.CounterVec
+	receivedLineOk      *prometheus.CounterVec
+	receivedLineNoError *prometheus.CounterVec
+	encodingFailures    *prometheus.CounterVec
+	filesActive         prometheus.Gauge
 
 	// Manager metrics
 	failedTargets *prometheus.CounterVec
@@ -40,6 +43,21 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 		Name:      "read_lines_total",
 		Help:      "Number of lines read.",
 	}, []string{"path", "contains_routing_queries_request"})
+	m.receivedLineChannel = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "promtail",
+		Name:      "received_lines_channel_total",
+		Help:      "Number of lines received via channel.",
+	}, []string{"path", "contains_routing_queries_request"})
+	m.receivedLineOk = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "promtail",
+		Name:      "received_lines_ok_total",
+		Help:      "Number of lines received via channel ok.",
+	}, []string{"path", "contains_routing_queries_request"})
+	m.receivedLineNoError = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "promtail",
+		Name:      "received_lines_no_error_total",
+		Help:      "Number of lines received without an error.",
+	}, []string{"path", "contains_routing_queries_request"})
 	m.filesActive = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: "promtail",
 		Name:      "files_active_total",
@@ -62,6 +80,9 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 			m.readBytes,
 			m.totalBytes,
 			m.readLines,
+			m.receivedLineChannel,
+			m.receivedLineOk,
+			m.receivedLineNoError,
 			m.filesActive,
 			m.failedTargets,
 			m.targetsActive,
