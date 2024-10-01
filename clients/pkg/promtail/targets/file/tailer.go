@@ -160,7 +160,9 @@ func (t *tailer) readLines() {
 	}()
 	entries := t.handler.Chan()
 	for {
+		level.Debug(t.logger).Log("msg", "waiting to read from channel", "path", t.path)
 		line, ok := <-t.tail.Lines
+		level.Debug(t.logger).Log("msg", "read from channel", "path", t.path, "line", line.Text, "ok", ok)
 		containsRoutingQueriesRequest := fmt.Sprintf("%v", strings.Contains(line.Text, "http /routings-queries"))
 		t.metrics.receivedLineChannel.WithLabelValues(t.path, containsRoutingQueriesRequest).Inc()
 		// if !strings.Contains(t.tail.Filename, "promtail-liam-test-logs") {
