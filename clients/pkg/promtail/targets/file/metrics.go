@@ -8,11 +8,15 @@ type Metrics struct {
 	reg prometheus.Registerer
 
 	// File-specific metrics
-	readBytes        *prometheus.GaugeVec
-	totalBytes       *prometheus.GaugeVec
-	readLines        *prometheus.CounterVec
-	encodingFailures *prometheus.CounterVec
-	filesActive      prometheus.Gauge
+	readBytes                     *prometheus.GaugeVec
+	totalBytes                    *prometheus.GaugeVec
+	readLines                     *prometheus.CounterVec
+	receivedLineChannel           *prometheus.CounterVec
+	skippedLines                  *prometheus.CounterVec
+	channelClosureCount           *prometheus.CounterVec
+	readFilesGoRoutineExitCounter *prometheus.CounterVec
+	encodingFailures              *prometheus.CounterVec
+	filesActive                   prometheus.Gauge
 
 	// Manager metrics
 	failedTargets *prometheus.CounterVec
@@ -39,7 +43,28 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 		Namespace: "promtail",
 		Name:      "read_lines_total",
 		Help:      "Number of lines read.",
+	}, []string{"path", "contains_routing_queries_request"})
+	m.receivedLineChannel = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "promtail",
+		Name:      "received_lines_channel_total",
+		Help:      "Number of lines received via channel.",
+	}, []string{"path", "contains_routing_queries_request"})
+	m.skippedLines = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "promtail",
+		Name:      "skipped_lines_total",
+		Help:      "Number of lines skipped.",
 	}, []string{"path"})
+	m.channelClosureCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "promtail",
+		Name:      "channel_closure_total",
+		Help:      "Number of times the channel was closed.",
+	}, []string{"path"})
+	m.readFilesGoRoutineExitCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "promtail",
+		Name:      "read_files_go_routine_exit_total",
+		Help:      "Number of times the read files go routine exited.",
+	}, []string{"path"})
+
 	m.filesActive = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: "promtail",
 		Name:      "files_active_total",
@@ -62,9 +87,13 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 			m.readBytes,
 			m.totalBytes,
 			m.readLines,
+			m.receivedLineChannel,
 			m.filesActive,
 			m.failedTargets,
 			m.targetsActive,
+			m.channelClosureCount,
+			m.readFilesGoRoutineExitCounter,
+			m.skippedLines,
 		)
 	}
 

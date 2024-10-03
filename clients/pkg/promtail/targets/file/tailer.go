@@ -3,6 +3,7 @@ package file
 import (
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -145,12 +146,12 @@ func (t *tailer) updatePosition() {
 // is called, the underlying tailer will never exit if there are unread lines in the t.tail.Lines channel
 func (t *tailer) readLines() {
 	level.Info(t.logger).Log("msg", "tail routine: started", "path", t.path)
-
 	t.running.Store(true)
 
 	// This function runs in a goroutine, if it exits this tailer will never do any more tailing.
 	// Clean everything up.
 	defer func() {
+		t.metrics.readFilesGoRoutineExitCounter.WithLabelValues(t.path).Inc()
 		t.running.Store(false)
 		level.Info(t.logger).Log("msg", "tail routine: exited", "path", t.path)
 		close(t.done)
@@ -158,9 +159,25 @@ func (t *tailer) readLines() {
 		close(t.posquit)
 	}()
 	entries := t.handler.Chan()
+	var previousLineCount int
 	for {
+		// level.Debug(t.logger).Log("msg", "waiting to read from channel", "path", t.path)
 		line, ok := <-t.tail.Lines
+		if line.LineCount-previousLineCount > 1 {
+			level.Info(t.logger).Log("msg", "skipped lines", "path", t.path, "previousLineCount", previousLineCount, "currentLineCount", line.LineCount)
+			t.metrics.skippedLines.WithLabelValues(t.path).Add(float64(line.LineCount - previousLineCount - 1))
+		}
+		previousLineCount = line.LineCount
+		if !strings.Contains(t.tail.Filename, "promtail-liam-test-logs") {
+			level.Debug(t.logger).Log("msg", "read from channel", "path", t.path, "line", line.Text, "ok", ok, "lineCount", line.LineCount)
+		}
+		containsRoutingQueriesRequest := fmt.Sprintf("%v", strings.Contains(line.Text, "http /routings-queries"))
+		t.metrics.receivedLineChannel.WithLabelValues(t.path, containsRoutingQueriesRequest).Inc()
+		// if !strings.Contains(t.tail.Filename, "promtail-liam-test-logs") {
+		// 	level.Info(t.logger).Log("msg", fmt.Sprintf("Read line for file %s, contains 'http /routings-queries' %v\n", t.tail.Filename, strings.Contains(line.Text, "http /routings-queries")))
+		// }
 		if !ok {
+			t.metrics.channelClosureCount.WithLabelValues(t.path).Inc()
 			level.Info(t.logger).Log("msg", "tail routine: tail channel closed, stopping tailer", "path", t.path, "reason", t.tail.Tomb.Err())
 			return
 		}
@@ -184,7 +201,7 @@ func (t *tailer) readLines() {
 			text = line.Text
 		}
 
-		t.metrics.readLines.WithLabelValues(t.path).Inc()
+		t.metrics.readLines.WithLabelValues(t.path, containsRoutingQueriesRequest).Inc()
 		entries <- api.Entry{
 			Labels: model.LabelSet{},
 			Entry: logproto.Entry{
@@ -264,9 +281,13 @@ func (t *tailer) convertToUTF8(text string) (string, error) {
 func (t *tailer) cleanupMetrics() {
 	// When we stop tailing the file, also un-export metrics related to the file
 	t.metrics.filesActive.Add(-1.)
-	t.metrics.readLines.DeleteLabelValues(t.path)
+	t.metrics.readLines.DeleteLabelValues(t.path, "true")
+	t.metrics.readLines.DeleteLabelValues(t.path, "false")
+	t.metrics.receivedLineChannel.DeleteLabelValues(t.path, "true")
+	t.metrics.receivedLineChannel.DeleteLabelValues(t.path, "false")
 	t.metrics.readBytes.DeleteLabelValues(t.path)
 	t.metrics.totalBytes.DeleteLabelValues(t.path)
+	t.metrics.skippedLines.DeleteLabelValues(t.path)
 }
 
 func (t *tailer) Path() string {

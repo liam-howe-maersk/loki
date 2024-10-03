@@ -26,14 +26,15 @@ var (
 )
 
 type Line struct {
-	Text string
-	Time time.Time
-	Err  error // Error from tail
+	Text      string
+	LineCount int
+	Time      time.Time
+	Err       error // Error from tail
 }
 
 // NewLine returns a Line with present time.
 func NewLine(text string) *Line {
-	return &Line{text, time.Now(), nil}
+	return &Line{text, 0, time.Now(), nil}
 }
 
 // SeekInfo represents arguments to `os.Seek`
@@ -295,7 +296,7 @@ func (tail *Tail) readLine() (string, error) {
 func (tail *Tail) tailFileSync() {
 	defer tail.Done()
 	defer tail.close()
-
+	tail.Logger.Printf("Called tailFileSync on %s", tail.Filename)
 	if !tail.MustExist {
 		// deferred first open, not technically truncated but we don't need to check for changed files
 		err := tail.reopen(true)
@@ -322,14 +323,17 @@ func (tail *Tail) tailFileSync() {
 	var offset int64
 	var err error
 	oneMoreRun := false
+	var lineCount int
 
 	// Read line by line.
 	for {
+
 		// do not seek in named pipes
 		if !tail.Pipe {
 			// grab the position in case we need to back up in the event of a half-line
 			offset, err = tail.Tell()
 			if err != nil {
+				tail.Logger.Printf("Error retrieving offset: %s\n", err)
 				tail.Kill(err)
 				return
 			}
@@ -339,13 +343,17 @@ func (tail *Tail) tailFileSync() {
 
 		// Process `line` even if err is EOF.
 		if err == nil {
-			cooloff := !tail.sendLine(line)
+			if !strings.Contains(tail.Filename, "promtail-liam-test-logs") {
+				lineCount++
+			}
+			cooloff := !tail.sendLine(line, lineCount)
+
 			if cooloff {
 				// Wait a second before seeking till the end of
 				// file when rate limit is reached.
 				msg := ("Too much log activity; waiting a second " +
 					"before resuming tailing")
-				tail.Lines <- &Line{msg, time.Now(), errors.New(msg)}
+				tail.Lines <- &Line{msg, 0, time.Now(), errors.New(msg)}
 				select {
 				case <-time.After(time.Second):
 				case <-tail.Dying():
@@ -357,18 +365,23 @@ func (tail *Tail) tailFileSync() {
 				}
 			}
 		} else if err == io.EOF {
+			if !strings.Contains(tail.Filename, "promtail-liam-test-logs") {
+				tail.Logger.Printf("EOF on %s\n", tail.Filename)
+			}
 			if !tail.Follow {
 				if line != "" {
-					tail.sendLine(line)
+					tail.sendLine(line, lineCount)
 				}
 				return
 			}
 
 			if tail.Follow && line != "" {
+				tail.Logger.Printf("Seeking to offset %d on %s\n", tail.Filename)
 				// this has the potential to never return the last line if
 				// it's not followed by a newline; seems a fair trade here
 				err := tail.seekTo(SeekInfo{Offset: offset, Whence: 0})
 				if err != nil {
+					tail.Logger.Printf("seekTo returned error: %s\n", err)
 					tail.Kill(err)
 					return
 				}
@@ -378,6 +391,7 @@ func (tail *Tail) tailFileSync() {
 			// this is to catch events which might get missed in polling mode.
 			// now that the last run is completed, finish deleting the file
 			if oneMoreRun {
+				tail.Logger.Printf("oneMoreRun is %v for %s\n", oneMoreRun, tail.Filename)
 				oneMoreRun = false
 				err = tail.finishDelete()
 				if err != nil {
@@ -393,6 +407,7 @@ func (tail *Tail) tailFileSync() {
 			// implementation (inotify or polling).
 			oneMoreRun, err = tail.waitForChanges()
 			if err != nil {
+				tail.Logger.Printf("waitForChanges returned error: %s\n", err)
 				if err != ErrStop {
 					tail.Kill(err)
 				}
@@ -400,6 +415,7 @@ func (tail *Tail) tailFileSync() {
 			}
 		} else {
 			// non-EOF error
+			tail.Logger.Printf("Error reading %s: %s\n", tail.Filename, err)
 			tail.Killf("Error reading %s: %s", tail.Filename, err)
 			return
 		}
@@ -409,6 +425,7 @@ func (tail *Tail) tailFileSync() {
 			if tail.Err() == errStopAtEOF {
 				continue
 			}
+			tail.Logger.Printf("Tailing dying with error: %s\n", tail.Err())
 			return
 		default:
 		}
@@ -494,17 +511,21 @@ func (tail *Tail) seekTo(pos SeekInfo) error {
 
 // sendLine sends the line(s) to Lines channel, splitting longer lines
 // if necessary. Return false if rate limit is reached.
-func (tail *Tail) sendLine(line string) bool {
+func (tail *Tail) sendLine(line string, lineCount int) bool {
 	now := time.Now()
 	lines := []string{line}
 
 	// Split longer lines
 	if tail.MaxLineSize > 0 && len(line) > tail.MaxLineSize {
+		tail.Logger.Printf("Line size larger than maxLineSize %d, partitioning\n", tail.MaxLineSize)
 		lines = util.PartitionString(line, tail.MaxLineSize)
 	}
 
+	if !strings.Contains(tail.Filename, "promtail-liam-test-logs") {
+		tail.Logger.Printf("Sending %d lines for file %s with lineCount %d, contains 'http /routings-queries' %v\n", len(lines), tail.Filename, lineCount, strings.Contains(line, "http /routings-queries"))
+	}
 	for _, line := range lines {
-		tail.Lines <- &Line{line, now, nil}
+		tail.Lines <- &Line{line, lineCount, now, nil}
 	}
 
 	if tail.Config.RateLimiter != nil {

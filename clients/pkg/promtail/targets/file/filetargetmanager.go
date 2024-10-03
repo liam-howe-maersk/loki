@@ -446,8 +446,10 @@ func (s *targetSyncer) sendFileCreateEvent(event fsnotify.Event) {
 			continue
 		}
 		if !matched {
-			level.Debug(s.log).Log("msg", "new file does not match glob", "filename", event.Name)
+			level.Debug(s.log).Log("msg", "new file does not match glob", "filename", event.Name, "glob", path)
 			continue
+		} else {
+			level.Debug(s.log).Log("msg", "new file does match glob", "filename", event.Name, "glob", path)
 		}
 		watcher <- event
 	}
