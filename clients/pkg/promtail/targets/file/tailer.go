@@ -168,7 +168,9 @@ func (t *tailer) readLines() {
 			t.metrics.skippedLines.WithLabelValues(t.path).Add(float64(line.LineCount - previousLineCount - 1))
 		}
 		previousLineCount = line.LineCount
-		level.Debug(t.logger).Log("msg", "read from channel", "path", t.path, "line", line.Text, "ok", ok, "lineCount", line.LineCount)
+		if !strings.Contains(t.tail.Filename, "promtail-liam-test-logs") {
+			level.Debug(t.logger).Log("msg", "read from channel", "path", t.path, "line", line.Text, "ok", ok, "lineCount", line.LineCount)
+		}
 		containsRoutingQueriesRequest := fmt.Sprintf("%v", strings.Contains(line.Text, "http /routings-queries"))
 		t.metrics.receivedLineChannel.WithLabelValues(t.path, containsRoutingQueriesRequest).Inc()
 		// if !strings.Contains(t.tail.Filename, "promtail-liam-test-logs") {
