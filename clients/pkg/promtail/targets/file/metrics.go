@@ -12,8 +12,7 @@ type Metrics struct {
 	totalBytes                    *prometheus.GaugeVec
 	readLines                     *prometheus.CounterVec
 	receivedLineChannel           *prometheus.CounterVec
-	receivedLineOk                *prometheus.CounterVec
-	receivedLineNoError           *prometheus.CounterVec
+	skippedLines                  *prometheus.CounterVec
 	channelClosureCount           *prometheus.CounterVec
 	readFilesGoRoutineExitCounter *prometheus.CounterVec
 	encodingFailures              *prometheus.CounterVec
@@ -50,6 +49,11 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 		Name:      "received_lines_channel_total",
 		Help:      "Number of lines received via channel.",
 	}, []string{"path", "contains_routing_queries_request"})
+	m.skippedLines = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "promtail",
+		Name:      "skipped_lines_total",
+		Help:      "Number of lines skipped.",
+	}, []string{"path"})
 	m.channelClosureCount = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "promtail",
 		Name:      "channel_closure_total",
@@ -61,16 +65,6 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 		Help:      "Number of times the read files go routine exited.",
 	}, []string{"path"})
 
-	m.receivedLineOk = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "promtail",
-		Name:      "received_lines_ok_total",
-		Help:      "Number of lines received via channel ok.",
-	}, []string{"path", "contains_routing_queries_request"})
-	m.receivedLineNoError = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "promtail",
-		Name:      "received_lines_no_error_total",
-		Help:      "Number of lines received without an error.",
-	}, []string{"path", "contains_routing_queries_request"})
 	m.filesActive = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: "promtail",
 		Name:      "files_active_total",
@@ -94,11 +88,12 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 			m.totalBytes,
 			m.readLines,
 			m.receivedLineChannel,
-			m.receivedLineOk,
-			m.receivedLineNoError,
 			m.filesActive,
 			m.failedTargets,
 			m.targetsActive,
+			m.channelClosureCount,
+			m.readFilesGoRoutineExitCounter,
+			m.skippedLines,
 		)
 	}
 

@@ -26,14 +26,15 @@ var (
 )
 
 type Line struct {
-	Text string
-	Time time.Time
-	Err  error // Error from tail
+	Text      string
+	LineCount int
+	Time      time.Time
+	Err       error // Error from tail
 }
 
 // NewLine returns a Line with present time.
 func NewLine(text string) *Line {
-	return &Line{text, time.Now(), nil}
+	return &Line{text, 0, time.Now(), nil}
 }
 
 // SeekInfo represents arguments to `os.Seek`
@@ -324,7 +325,6 @@ func (tail *Tail) tailFileSync() {
 	oneMoreRun := false
 	var lineCount int
 
-
 	// Read line by line.
 	for {
 
@@ -341,21 +341,19 @@ func (tail *Tail) tailFileSync() {
 
 		line, err := tail.readLine()
 
-
-
 		// Process `line` even if err is EOF.
 		if err == nil {
 			if !strings.Contains(tail.Filename, "promtail-liam-test-logs") {
 				lineCount++
-			 }
-			cooloff := !tail.sendLine(line+ fmt.Sprintf(" lineCount=%d", lineCount))
+			}
+			cooloff := !tail.sendLine(line, lineCount)
 
 			if cooloff {
 				// Wait a second before seeking till the end of
 				// file when rate limit is reached.
 				msg := ("Too much log activity; waiting a second " +
 					"before resuming tailing")
-				tail.Lines <- &Line{msg, time.Now(), errors.New(msg)}
+				tail.Lines <- &Line{msg, 0, time.Now(), errors.New(msg)}
 				select {
 				case <-time.After(time.Second):
 				case <-tail.Dying():
@@ -372,7 +370,7 @@ func (tail *Tail) tailFileSync() {
 			}
 			if !tail.Follow {
 				if line != "" {
-					tail.sendLine(line)
+					tail.sendLine(line, lineCount)
 				}
 				return
 			}
@@ -513,7 +511,7 @@ func (tail *Tail) seekTo(pos SeekInfo) error {
 
 // sendLine sends the line(s) to Lines channel, splitting longer lines
 // if necessary. Return false if rate limit is reached.
-func (tail *Tail) sendLine(line string) bool {
+func (tail *Tail) sendLine(line string, lineCount int) bool {
 	now := time.Now()
 	lines := []string{line}
 
@@ -524,10 +522,10 @@ func (tail *Tail) sendLine(line string) bool {
 	}
 
 	if !strings.Contains(tail.Filename, "promtail-liam-test-logs") {
-		tail.Logger.Printf("Sending %d lines for file %s, contains 'http /routings-queries' %v\n", len(lines), tail.Filename, strings.Contains(line, "http /routings-queries"))
+		tail.Logger.Printf("Sending %d lines for file %s with lineCount %d, contains 'http /routings-queries' %v\n", len(lines), tail.Filename, lineCount, strings.Contains(line, "http /routings-queries"))
 	}
 	for _, line := range lines {
-		tail.Lines <- &Line{line, now, nil}
+		tail.Lines <- &Line{line, lineCount, now, nil}
 	}
 
 	if tail.Config.RateLimiter != nil {
