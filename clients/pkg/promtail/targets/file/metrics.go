@@ -14,6 +14,7 @@ type Metrics struct {
 	receivedLineChannel *prometheus.CounterVec
 	receivedLineOk      *prometheus.CounterVec
 	receivedLineNoError *prometheus.CounterVec
+	channelClosureCount *prometheus.CounterVec
 	encodingFailures    *prometheus.CounterVec
 	filesActive         prometheus.Gauge
 
@@ -48,6 +49,12 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 		Name:      "received_lines_channel_total",
 		Help:      "Number of lines received via channel.",
 	}, []string{"path", "contains_routing_queries_request"})
+	m.channelClosureCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "promtail",
+		Name:      "channel_closure_total",
+		Help:      "Number of times the channel was closed.",
+	}, []string{"path"})
+
 	m.receivedLineOk = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "promtail",
 		Name:      "received_lines_ok_total",

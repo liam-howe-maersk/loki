@@ -146,7 +146,6 @@ func (t *tailer) updatePosition() {
 // is called, the underlying tailer will never exit if there are unread lines in the t.tail.Lines channel
 func (t *tailer) readLines() {
 	level.Info(t.logger).Log("msg", "tail routine: started", "path", t.path)
-
 	t.running.Store(true)
 
 	// This function runs in a goroutine, if it exits this tailer will never do any more tailing.
@@ -169,6 +168,7 @@ func (t *tailer) readLines() {
 		// 	level.Info(t.logger).Log("msg", fmt.Sprintf("Read line for file %s, contains 'http /routings-queries' %v\n", t.tail.Filename, strings.Contains(line.Text, "http /routings-queries")))
 		// }
 		if !ok {
+			t.metrics.channelClosureCount.WithLabelValues(t.path).Inc()
 			level.Info(t.logger).Log("msg", "tail routine: tail channel closed, stopping tailer", "path", t.path, "reason", t.tail.Tomb.Err())
 			return
 		}
@@ -292,6 +292,7 @@ func (t *tailer) cleanupMetrics() {
 	t.metrics.receivedLineChannel.DeleteLabelValues(t.path, "false")
 	t.metrics.readBytes.DeleteLabelValues(t.path)
 	t.metrics.totalBytes.DeleteLabelValues(t.path)
+	t.metrics.channelClosureCount.DeleteLabelValues(t.path)
 }
 
 func (t *tailer) Path() string {
