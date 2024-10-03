@@ -151,6 +151,7 @@ func (t *tailer) readLines() {
 	// This function runs in a goroutine, if it exits this tailer will never do any more tailing.
 	// Clean everything up.
 	defer func() {
+		t.metrics.readFilesGoRoutineExitCounter.WithLabelValues(t.path).Inc()
 		t.running.Store(false)
 		level.Info(t.logger).Log("msg", "tail routine: exited", "path", t.path)
 		close(t.done)
@@ -292,7 +293,6 @@ func (t *tailer) cleanupMetrics() {
 	t.metrics.receivedLineChannel.DeleteLabelValues(t.path, "false")
 	t.metrics.readBytes.DeleteLabelValues(t.path)
 	t.metrics.totalBytes.DeleteLabelValues(t.path)
-	t.metrics.channelClosureCount.DeleteLabelValues(t.path)
 }
 
 func (t *tailer) Path() string {

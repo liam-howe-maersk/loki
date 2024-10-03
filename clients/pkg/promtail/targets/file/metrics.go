@@ -8,15 +8,16 @@ type Metrics struct {
 	reg prometheus.Registerer
 
 	// File-specific metrics
-	readBytes           *prometheus.GaugeVec
-	totalBytes          *prometheus.GaugeVec
-	readLines           *prometheus.CounterVec
-	receivedLineChannel *prometheus.CounterVec
-	receivedLineOk      *prometheus.CounterVec
-	receivedLineNoError *prometheus.CounterVec
-	channelClosureCount *prometheus.CounterVec
-	encodingFailures    *prometheus.CounterVec
-	filesActive         prometheus.Gauge
+	readBytes                     *prometheus.GaugeVec
+	totalBytes                    *prometheus.GaugeVec
+	readLines                     *prometheus.CounterVec
+	receivedLineChannel           *prometheus.CounterVec
+	receivedLineOk                *prometheus.CounterVec
+	receivedLineNoError           *prometheus.CounterVec
+	channelClosureCount           *prometheus.CounterVec
+	readFilesGoRoutineExitCounter *prometheus.CounterVec
+	encodingFailures              *prometheus.CounterVec
+	filesActive                   prometheus.Gauge
 
 	// Manager metrics
 	failedTargets *prometheus.CounterVec
@@ -53,6 +54,11 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 		Namespace: "promtail",
 		Name:      "channel_closure_total",
 		Help:      "Number of times the channel was closed.",
+	}, []string{"path"})
+	m.readFilesGoRoutineExitCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "promtail",
+		Name:      "read_files_go_routine_exit_total",
+		Help:      "Number of times the read files go routine exited.",
 	}, []string{"path"})
 
 	m.receivedLineOk = prometheus.NewCounterVec(prometheus.CounterOpts{
