@@ -322,9 +322,12 @@ func (tail *Tail) tailFileSync() {
 	var offset int64
 	var err error
 	oneMoreRun := false
+	var lineCount int
+
 
 	// Read line by line.
 	for {
+
 		// do not seek in named pipes
 		if !tail.Pipe {
 			// grab the position in case we need to back up in the event of a half-line
@@ -338,9 +341,12 @@ func (tail *Tail) tailFileSync() {
 
 		line, err := tail.readLine()
 
+
+
 		// Process `line` even if err is EOF.
 		if err == nil {
-			cooloff := !tail.sendLine(line)
+			lineCount++
+			cooloff := !tail.sendLine(line+ fmt.Sprintf(" lineCount=%d", lineCount))
 			// if !strings.Contains(tail.Filename, "promtail-liam-test-logs") {
 			// 	tail.Logger.Printf("Log line(s) read and sent for file %s, with cooloff %v, contains 'http /routings-queries' %v\n", tail.Filename, cooloff, strings.Contains(line, "http /routings-queries"))
 			// }
